@@ -4,8 +4,6 @@ from random import randint
 import math, time, argparse
 import heapq
 
-from numpy.core.fromnumeric import argsort
-
 name = 'client_mmueller'
 
 """
@@ -90,8 +88,8 @@ class ClientController():
                     self.clientsocket.close()
 
                 while self.msg_rec():
+                    time.sleep(0.1)
                     self.go()
-                    time.sleep(0)
                 if self.verbose:
                     print("end")
                 self.clientsocket.close()
@@ -100,7 +98,7 @@ class ClientController():
 
     def addView(self, view):
         """
-        The field of view is beeing added to the internal map.
+        The field of view is being added to the internal map.
         :param view: the width of the field of view
         """
         dist = (len(view)-1)/2
@@ -109,6 +107,10 @@ class ClientController():
             print("%i ter Zug:" % (self.turn+1))
             print("Sichtweite: %d" % dist)
             print("Position: %i, %i" % (self.xy[0], self.xy[1]))
+            if self.f_Scrol:
+                print("Found Scroll: %i, %i" % (self.xy_scrol[0], self.xy_scrol[1]))
+            if self.f_Fcast:
+                print("Found Castle: %i, %i" % (self.xy_Fcast[0], self.xy_Fcast[1]))
         for y in range(0, len(view)):
             if self.verbose:
                 print(view[y])
@@ -194,8 +196,9 @@ class ClientController():
         Currently it just goes the direction with the least weight of the surrounding fields.
         :return:
         """
-        if True: # current algorithm
-            # this part gets all neighbouring fields and puts them in a heapqueue in order to get the onw with the lowes wight
+        if self.turn < 5: # current algorithm
+            # this part gets all neighbouring fields and puts them in a heapqueue in order to get the one
+            # with the lowes wight
             neig = self.getNeighbours(self.xy)
             if self.turn > 0:
                 neig.pop((self.last_dir+2)%len(neig))
@@ -203,14 +206,34 @@ class ClientController():
             for i in neig:
                 pqueue.put(tuple(i), self.weight(i, 5))
 
-            # this takes the step with the leas weight and translates it to a number and then goes that direction
+            # this takes the step with the least weight and translates it to a number and then goes that direction
             step = pqueue.get()
             neighbours = self.getNeighbours(self.xy)
             for i in range(0, len(neighbours)):
                 if neighbours[i] == list(step):
                     self.goStep(str(i))
         else:
+            pqueue = PriorityQueue()
+            for y in range(0, len(self.map)):
+                for x in range(0, len(self.map)):
+                    pqueue.put(tuple([x, y]), self.findUnknown([x, y], 2))
+
+            tmp = pqueue.get()
+            print(tmp)
+            self.dijkstra_search(tmp)
+
             pass #another algorihtm maybe
+
+    def findUnknown(self, xy, level):
+        neigh = self.getNeighbours(xy)
+        u = 0
+        if self.map[xy[0]][xy[1]] == FieldType.UNKNOWN.value:
+            u -= 1
+        for f in neigh:
+            if level > 0:
+                u += self.findUnknown(f, level-1)/len(self.getNeighbours(f))
+        return u
+
 
     def goStep(self, step):
         """
@@ -230,11 +253,11 @@ class ClientController():
 
     def goTo(self, xy):
         """
-        This was usefull in the past :/
+        This was useful in the past :/
         :param xy: target
         :return:
         """
-        dij_xy = self.dijkstra_search(xy)
+        self.dijkstra_search(xy)
 
     def getNeighbours(self, xy):
         """
@@ -284,27 +307,30 @@ class ClientController():
 
     def msg_rec(self):
         """
-        this recives a message from the server and decodes it
+        this receives a message from the server and decodes it
         """
         data = self.clientsocket.recv(1024).decode()
         view = []
 
-        i = int(math.sqrt(len(data)/2)) # Field of view
+        if not data:
+            return False
 
         if len(data)< 18:   # checks if the char sequence is correct
             return False
         if data[1] != ' ' and data[1] != 'B':
             return False
 
+        i = int(math.sqrt(len(data)/2)) # Field of view
+
         for y in range(0, i):
             row = []
             for x in range(0, i):
                 row.append(data[(i*2*y)+x*2])
                 if data[(i*2*y)+x*2+1] == 'B':
-                    self.f_Scrol = True
                     ab = self.translate(x, y, (i-1)/2)
                     a = ab[0]
                     b = ab[1]
+                    self.f_Scrol = True
                     self.xy_scrol = [a, b]
             view.append(row)
             #print(row)
@@ -378,23 +404,27 @@ class ClientController():
 
     def warp(self, a):
         if a < 0:
-            a = len(self.map) + a
+            a += len(self.map)
         if a >= len(self.map):
-            a = a - len(self.map)
+            a -= len(self.map)
         return a
 
     def warpX(self):
         """
         Translates the xy position if it gets near te edge (could/should probably be done with the % opertor)
         """
+        '''
         if self.xy[1] < 0:
-            self.xy[1] = len(self.map) + self.xy[1]
-        if self.xy[0] >= len(self.map):
-            self.xy[0] = self.xy[0] - len(self.map)
-        if self.xy[1] >= len(self.map):
-            self.xy[1] = self.xy[1] - len(self.map)
-        if self.xy[0] < 0:
-            self.xy[0] = len(self.map) + self.xy[0]
+            self.xy[1] += len(self.map)
+        elif self.xy[0] >= len(self.map):
+            self.xy[0] -= len(self.map)
+        elif self.xy[1] >= len(self.map):
+            self.xy[1] -= len(self.map)
+        elif self.xy[0] < 0:
+            self.xy[0] += len(self.map)
+        '''
+        self.xy[0] %= len(self.map)
+        self.xy[1] %= len(self.map)
 
     def weight(self, xy, neibours=0):
         """
@@ -408,7 +438,7 @@ class ClientController():
         if self.f_Fcast and self.f_Scrol:
             uvalue = 15
         else:
-            uvalue = 10
+            uvalue = 9
 
         b = {
             FieldType.UNKNOWN.value: uvalue,
