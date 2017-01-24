@@ -22,7 +22,14 @@ class PriorityQueue:
         return len(self.elements) == 0
 
     def put(self, item, priority):
+        """
+        """
+        '''
         heapq.heappush(self.elements, (priority, item))
+        '''
+        self.elements.append((priority, item))
+        self.elements.sort(key=lambda tup: tup[0])
+
 
     def get(self):
         return heapq.heappop(self.elements)[1]
@@ -216,19 +223,18 @@ class ClientController():
             pqueue = PriorityQueue()
             for y in range(0, len(self.map)):
                 for x in range(0, len(self.map)):
-                    pqueue.put(tuple([x, y]), self.findUnknown([x, y], 2))
+                    pqueue.put((x, y), self.findUnknown([x, y], 2))
 
             tmp = pqueue.get()
             print(tmp)
             self.dijkstra_search(tmp)
 
-            pass #another algorihtm maybe
 
     def findUnknown(self, xy, level):
         neigh = self.getNeighbours(xy)
         u = 0
         if self.map[xy[0]][xy[1]] == FieldType.UNKNOWN.value:
-            u -= 1
+            u -= 100    # -100 bc. the tuple in the heapqueue would change the overall value
         for f in neigh:
             if level > 0:
                 u += self.findUnknown(f, level-1)/len(self.getNeighbours(f))
@@ -315,9 +321,8 @@ class ClientController():
         if not data:
             return False
 
-        if len(data)< 18:   # checks if the char sequence is correct
-            return False
         if data[1] != ' ' and data[1] != 'B':
+            print(data)
             return False
 
         i = int(math.sqrt(len(data)/2)) # Field of view
@@ -394,20 +399,12 @@ class ClientController():
         """
         a = self.xy[0] + x - dist
         b = self.xy[1] + y - dist
-
         a = self.warp(a)
         b = self.warp(b)
-
-        a = int(a)
-        b = int(b)
         return [a, b]
 
     def warp(self, a):
-        if a < 0:
-            a += len(self.map)
-        if a >= len(self.map):
-            a -= len(self.map)
-        return a
+        return int(a%len(self.map))
 
     def warpX(self):
         """
@@ -438,7 +435,7 @@ class ClientController():
         if self.f_Fcast and self.f_Scrol:
             uvalue = 15
         else:
-            uvalue = 9
+            uvalue = 11
 
         b = {
             FieldType.UNKNOWN.value: uvalue,
