@@ -219,7 +219,8 @@ class ClientController():
                     pqueue.put((x, y), self.findUnknown([x, y], 3))
 
             tmp = pqueue.get()
-            print(tmp)
+            if self.verbose:
+                print(tmp)
             self.dijkstra_search(tmp)
 
 
