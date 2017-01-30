@@ -216,7 +216,7 @@ class ClientController():
             pqueue = PriorityQueue()
             for y in range(0, len(self.map)):
                 for x in range(0, len(self.map)):
-                    pqueue.put((x, y), self.findUnknown([x, y], 4))
+                    pqueue.put((x, y), self.findUnknown([x, y], 3))
 
             tmp = pqueue.get()
             print(tmp)
@@ -428,7 +428,7 @@ class ClientController():
         if self.f_Fcast and self.f_Scrol:
             uvalue = 150
         else:
-            uvalue = 110
+            uvalue = 100
 
         b = {
             FieldType.UNKNOWN.value: uvalue,
@@ -440,8 +440,8 @@ class ClientController():
         }[self.map[xy[1]][xy[0]]]
 
         if not self.f_Fcast and not self.f_Scrol:
-            b -= self.getNewFields(xy)
-            b += randint(0, 5)
+            b -= self.getNewFields(xy)*3
+            b += randint(0, 10)
         if neibours > 0:
             neibours-=1
             c = 0
