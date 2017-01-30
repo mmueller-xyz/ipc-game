@@ -42,16 +42,6 @@ class FieldType(Enum):
     MOUNTAIN = 'M'
     LAKE = 'L'
 
-class FieldWeight(Enum):
-    UNKNOWN = 11
-    GRASS = 10
-    FOREST = 10
-    MOUNTAIN = 20
-    LAKE = 999999
-    O_CASTLE = 0
-    F_CASTLE = 0
-    DISCOVER = 2
-
 class ClientController():
     """
     Currently missing is an algorithm that dicovers the whole map efficiently.
@@ -175,7 +165,10 @@ class ClientController():
         if self.verbose:
             print(path)
         if len(path) == 0:
-            self.g_Scrol = True
+            if self.f_Scrol == False:
+                pass
+            else:
+                self.g_Scrol = True
             self.go()
         else:
             neighbours = self.getNeighbours(self.xy)
@@ -203,7 +196,7 @@ class ClientController():
         Currently it just goes the direction with the least weight of the surrounding fields.
         :return:
         """
-        if self.turn < 5: # current algorithm
+        if False: # current algorithm
             # this part gets all neighbouring fields and puts them in a heapqueue in order to get the one
             # with the lowes wight
             neig = self.getNeighbours(self.xy)
@@ -223,7 +216,7 @@ class ClientController():
             pqueue = PriorityQueue()
             for y in range(0, len(self.map)):
                 for x in range(0, len(self.map)):
-                    pqueue.put((x, y), self.findUnknown([x, y], 2))
+                    pqueue.put((x, y), self.findUnknown([x, y], 4))
 
             tmp = pqueue.get()
             print(tmp)
@@ -232,9 +225,9 @@ class ClientController():
 
     def findUnknown(self, xy, level):
         neigh = self.getNeighbours(xy)
-        u = 0
-        if self.map[xy[0]][xy[1]] == FieldType.UNKNOWN.value:
-            u -= 100    # -100 bc. the tuple in the heapqueue would change the overall value
+        u = 1
+        if self.map[xy[1]][xy[0]] == FieldType.UNKNOWN.value:
+            u -= 1
         for f in neigh:
             if level > 0:
                 u += self.findUnknown(f, level-1)/len(self.getNeighbours(f))
@@ -433,21 +426,21 @@ class ClientController():
         xy[0] = self.warp(xy[0])
         xy[1] = self.warp(xy[1])
         if self.f_Fcast and self.f_Scrol:
-            uvalue = 15
+            uvalue = 150
         else:
-            uvalue = 11
+            uvalue = 110
 
         b = {
             FieldType.UNKNOWN.value: uvalue,
-            FieldType.GRASS.value: 10,
-            FieldType.FOREST.value: 10,
-            FieldType.MOUNTAIN.value: 20,
-            FieldType.LAKE.value: 999999,
-            FieldType.CASTLE.value: 10
+            FieldType.GRASS.value: 100,
+            FieldType.FOREST.value: 100,
+            FieldType.MOUNTAIN.value: 200,
+            FieldType.LAKE.value: 9999999,
+            FieldType.CASTLE.value: 100
         }[self.map[xy[1]][xy[0]]]
 
         if not self.f_Fcast and not self.f_Scrol:
-            b -= self.getNewFields(xy)*FieldWeight.DISCOVER.value
+            b -= self.getNewFields(xy)
             b += randint(0, 5)
         if neibours > 0:
             neibours-=1
