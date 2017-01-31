@@ -1,7 +1,8 @@
 import socket
 from enum import Enum
 from random import randint
-import math, time, argparse
+import math
+import argparse
 import heapq
 
 name = 'client_mmueller'
@@ -39,7 +40,7 @@ class FieldType(Enum):
     LAKE = 'L'
 
 
-class ClientController():
+class ClientController:
     """
     Currently missing is an algorithm that discovers the whole map efficiently.
     """
@@ -52,10 +53,10 @@ class ClientController():
         self.map = []           # internal Map
         self.mapsize = size     # size of the map
         self.xy = [0, 0]        # position
-        self.xy_scrol = [0, 0]  # position of the scroll
+        self.xy_scroll = [0, 0]  # position of the scroll
         self.xy_Fcast = [0, 0]  # position of the enemy castle
-        self.g_Scrol = False    # got scroll
-        self.f_Scrol = False    # found scroll
+        self.g_scroll = False    # got scroll
+        self.f_scroll = False    # found scroll
         self.f_Fcast = False    # found enemy castle
         self.turn = 0           # number of turns (total)
         self.last_dir = 0       # last direction we went
@@ -66,7 +67,6 @@ class ClientController():
             while len(lst) < self.mapsize:
                 lst.append(FieldType.UNKNOWN.value)
             self.map.append(lst)
-
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.clientsocket:
             try:
@@ -82,7 +82,6 @@ class ClientController():
                     self.clientsocket.close()
 
                 while self.msg_rec():
-                    time.sleep(0.1)
                     self.go()
                 if self.verbose:
                     print("end")
@@ -101,8 +100,8 @@ class ClientController():
             print("%i ter Zug:" % (self.turn+1))
             print("Sichtweite: %d" % dist)
             print("Position: %i, %i" % (self.xy[0], self.xy[1]))
-            if self.f_Scrol:
-                print("Found Scroll: %i, %i" % (self.xy_scrol[0], self.xy_scrol[1]))
+            if self.f_scroll:
+                print("Found Scroll: %i, %i" % (self.xy_scroll[0], self.xy_scroll[1]))
             if self.f_Fcast:
                 print("Found Castle: %i, %i" % (self.xy_Fcast[0], self.xy_Fcast[1]))
         for y in range(0, len(view)):
@@ -162,10 +161,10 @@ class ClientController():
         if self.verbose:
             print(path)
         if len(path) == 0:
-            if self.f_Scrol == False:
+            if self.f_scroll == False:
                 pass
             else:
-                self.g_Scrol = True
+                self.g_scroll = True
             self.go()
         else:
             neighbours = self.getNeighbours(self.xy)
@@ -180,9 +179,9 @@ class ClientController():
         Deferments what Algorithm to use and where to go to
         :return:
         """
-        if self.f_Scrol and not self.g_Scrol:
-            self.goTo(self.xy_scrol)
-        elif self.g_Scrol and self.f_Fcast:
+        if self.f_scroll and not self.g_scroll:
+            self.goTo(self.xy_scroll)
+        elif self.g_scroll and self.f_Fcast:
             self.goTo(self.xy_Fcast)
         else:
             self.goRandom()
@@ -213,13 +212,12 @@ class ClientController():
             pqueue = PriorityQueue()
             for y in range(0, len(self.map)):
                 for x in range(0, len(self.map)):
-                    pqueue.put((x, y), self.findUnknown([x, y], 3))
+                    pqueue.put((x, y), self.findUnknown([x, y], 4))
 
             tmp = pqueue.get()
             if self.verbose:
                 print(tmp)
             self.dijkstra_search(tmp)
-
 
     def findUnknown(self, xy, level):
         neigh = self.getNeighbours(xy)
@@ -230,7 +228,6 @@ class ClientController():
             if level > 0:
                 u += self.findUnknown(f, level-1)/len(self.getNeighbours(f))
         return u
-
 
     def goStep(self, step):
         """
@@ -316,7 +313,7 @@ class ClientController():
             print(data)
             return False
 
-        i = int(math.sqrt(len(data)/2)) # Field of view
+        i = int(math.sqrt(len(data)/2))  # Field of view
 
         for y in range(0, i):
             row = []
@@ -326,8 +323,8 @@ class ClientController():
                     ab = self.translate(x, y, (i-1)/2)
                     a = ab[0]
                     b = ab[1]
-                    self.f_Scrol = True
-                    self.xy_scrol = [a, b]
+                    self.f_scroll = True
+                    self.xy_scroll = [a, b]
             view.append(row)
 
         self.addView(view)
@@ -410,7 +407,7 @@ class ClientController():
         """
         xy[0] = self.warp(xy[0])
         xy[1] = self.warp(xy[1])
-        if self.f_Fcast and self.f_Scrol:
+        if self.f_Fcast and self.f_scroll:
             uvalue = 150
         else:
             uvalue = 100
@@ -424,8 +421,8 @@ class ClientController():
             FieldType.CASTLE.value: 100
         }[self.map[xy[1]][xy[0]]]
 
-        if not self.f_Fcast and not self.f_Scrol:
-            b -= self.getNewFields(xy)*4.2
+        if not self.f_Fcast and not self.f_scroll:
+            b -= self.getNewFields(xy)*5
             b += randint(0, 10)
         if neighbours > 0:
             neighbours -= 1
