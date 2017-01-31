@@ -11,6 +11,7 @@ Der Dijkstra Algorythmus wurde von "http://www.redblobgames.com/pathfinding/a-st
 übernommen und leicht verändert.
 """
 
+
 class PriorityQueue:
     """
     This is from http://www.redblobgames.com/pathfinding/a-star/implementation.html
@@ -22,17 +23,12 @@ class PriorityQueue:
         return len(self.elements) == 0
 
     def put(self, item, priority):
-        """
-        """
-        '''
-        heapq.heappush(self.elements, (priority, item))
-        '''
         self.elements.append((priority, item))
         self.elements.sort(key=lambda tup: tup[0])
 
-
     def get(self):
         return heapq.heappop(self.elements)[1]
+
 
 class FieldType(Enum):
     UNKNOWN = 'U'
@@ -42,9 +38,10 @@ class FieldType(Enum):
     MOUNTAIN = 'M'
     LAKE = 'L'
 
+
 class ClientController():
     """
-    Currently missing is an algorithm that dicovers the whole map efficiently.
+    Currently missing is an algorithm that discovers the whole map efficiently.
     """
     def __init__(self, ip="localhost", port="5050", size="10", verbose=False):
         """
@@ -52,16 +49,16 @@ class ClientController():
         :param port: the port to connect to
         :param size: the size of the map
         """
-        self.map = []           #internal Map
-        self.mapsize = size     #size of the map
-        self.xy = [0, 0]        #position
-        self.xy_scrol = [0, 0]  #position of the scroll
-        self.xy_Fcast = [0, 0]  #position of the enemy castle
-        self.g_Scrol = False    #got scroll
-        self.f_Scrol = False    #found scroll
-        self.f_Fcast = False    #found enemy castle
-        self.turn = 0           #number of turns (total)
-        self.last_dir = 0       #last direction we went
+        self.map = []           # internal Map
+        self.mapsize = size     # size of the map
+        self.xy = [0, 0]        # position
+        self.xy_scrol = [0, 0]  # position of the scroll
+        self.xy_Fcast = [0, 0]  # position of the enemy castle
+        self.g_Scrol = False    # got scroll
+        self.f_Scrol = False    # found scroll
+        self.f_Fcast = False    # found enemy castle
+        self.turn = 0           # number of turns (total)
+        self.last_dir = 0       # last direction we went
         self.verbose = verbose
 
         while len(self.map) < self.mapsize:
@@ -192,11 +189,11 @@ class ClientController():
 
     def goRandom(self):
         """
-        This is beeing called, if the next target is not discovered yet, not really random.
+        This is being called, if the next target is not discovered yet, not really random.
         Currently it just goes the direction with the least weight of the surrounding fields.
         :return:
         """
-        if False: # current algorithm
+        if self.turn < 3:
             # this part gets all neighbouring fields and puts them in a heapqueue in order to get the one
             # with the lowes wight
             neig = self.getNeighbours(self.xy)
@@ -261,7 +258,7 @@ class ClientController():
 
     def getNeighbours(self, xy):
         """
-        This method returns a list of all neighbouring fields of a specified source dield
+        This method returns a list of all neighbouring fields of a specified source field
         :param xy: the source field
         :return: a list of al neighbouring fields
         """
@@ -332,7 +329,6 @@ class ClientController():
                     self.f_Scrol = True
                     self.xy_scrol = [a, b]
             view.append(row)
-            #print(row)
 
         self.addView(view)
         if self.verbose:
@@ -354,7 +350,6 @@ class ClientController():
             self.xy[0] -= 1
         self.warpX()
         self.turn += 1
-        #print(self.xy)
 
     def printMap(self):
         """
@@ -378,9 +373,8 @@ class ClientController():
         while current != start:
             current = came_from[current]
             path.append(current)
-        #path.append(start)  # optional
         path.pop()
-        path.reverse()  # optional
+        path.reverse()
         return path
 
     def translate(self, x, y, dist):
@@ -402,26 +396,16 @@ class ClientController():
 
     def warpX(self):
         """
-        Translates the xy position if it gets near te edge (could/should probably be done with the % opertor)
+        Translates the xy position if it gets near te edge (could/should probably be done with the % operator)
         """
-        '''
-        if self.xy[1] < 0:
-            self.xy[1] += len(self.map)
-        elif self.xy[0] >= len(self.map):
-            self.xy[0] -= len(self.map)
-        elif self.xy[1] >= len(self.map):
-            self.xy[1] -= len(self.map)
-        elif self.xy[0] < 0:
-            self.xy[0] += len(self.map)
-        '''
         self.xy[0] %= len(self.map)
         self.xy[1] %= len(self.map)
 
-    def weight(self, xy, neibours=0):
+    def weight(self, xy, neighbours=0):
         """
         this calculates the weight of a field, don't ask what went through my mind
         :param xy: Field to check
-        :param neibours: determans how many levels of neighbouring fields should
+        :param neighbours: determines how many levels of neighbouring fields should
         :return:
         """
         xy[0] = self.warp(xy[0])
@@ -441,13 +425,13 @@ class ClientController():
         }[self.map[xy[1]][xy[0]]]
 
         if not self.f_Fcast and not self.f_Scrol:
-            b -= self.getNewFields(xy)*3
+            b -= self.getNewFields(xy)*4.2
             b += randint(0, 10)
-        if neibours > 0:
-            neibours-=1
+        if neighbours > 0:
+            neighbours -= 1
             c = 0
             for i in self.getNeighbours(xy):
-                c += self.weight(i, neibours)
+                c += self.weight(i, neighbours)
             b += c/len(self.getNeighbours(xy))
         return b
 
