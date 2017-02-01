@@ -5,7 +5,7 @@ import math
 import argparse
 import heapq
 
-name = 'client_mmueller'
+name = 'client_mmueller'    # name that will be displayed on the server
 
 """
 Der Dijkstra Algorythmus wurde von "http://www.redblobgames.com/pathfinding/a-star/implementation.html"
@@ -42,13 +42,19 @@ class FieldType(Enum):
 
 class ClientController:
     """
-    Currently missing is an algorithm that discovers the whole map efficiently.
+    This is a bot for a competition held at my school. In the game, 2 bots compete against each other and the first
+     one to find and take the bomb to the enemies castle wins. The game Area is variable and warps around on the edges
+     ((9, 9) neighbours (0, 9)). The bot can move only in one direction and every round the server sends the Bot a
+     string representing the area seen by the bot.
     """
     def __init__(self, ip="localhost", port="5050", size="10", verbose=False):
         """
+        The Bot gets initialized here and connects to the server.
+
         :param ip: the ip to connect to
         :param port: the port to connect to
         :param size: the size of the map
+        :param verbose: weather or not the bot prints various massages in the commandline
         """
         self.map = []           # internal Map
         self.mapsize = size     # size of the map
@@ -60,7 +66,7 @@ class ClientController:
         self.f_Fcast = False    # found enemy castle
         self.turn = 0           # number of turns (total)
         self.last_dir = 0       # last direction we went
-        self.verbose = verbose
+        self.verbose = verbose  #
 
         while len(self.map) < self.mapsize:
             lst = []
@@ -81,8 +87,9 @@ class ClientController:
                     # Schließen, falls Verbindung geschlossen wurde
                     self.clientsocket.close()
 
-                while self.msg_rec():
+                while self.msg_rec():   # the main loop
                     self.go()
+
                 if self.verbose:
                     print("end")
                 self.clientsocket.close()
@@ -92,26 +99,32 @@ class ClientController:
     def addView(self, view):
         """
         The field of view is being added to the internal map.
-        :param view: the width of the field of view
+
+        :param view: a 2d list, containing all fields
         """
-        dist = (len(view)-1)/2
-        if self.verbose:
+        dist = (len(view)-1)/2  # the viewing distance
+        if self.verbose:    # if the bot is in verbose mode, a lot of information is displayed here
             print()
             print("%i ter Zug:" % (self.turn+1))
             print("Sichtweite: %d" % dist)
             print("Position: %i, %i" % (self.xy[0], self.xy[1]))
+            gscroll = ""
+            if self.g_scroll:
+                gscroll = "(got it)"
             if self.f_scroll:
-                print("Found Scroll: %i, %i" % (self.xy_scroll[0], self.xy_scroll[1]))
+                print("Found Scroll: %i, %i %s" % (self.xy_scroll[0], self.xy_scroll[1], gscroll))
             if self.f_Fcast:
                 print("Found Castle: %i, %i" % (self.xy_Fcast[0], self.xy_Fcast[1]))
+
         for y in range(0, len(view)):
             if self.verbose:
                 print(view[y])
             for x in range(0, len(view)):
                 ab = self.translate(x, y, dist)
-                a = ab[0]
-                b = ab[1]
+                a = ab[0]   # x position on the real map
+                b = ab[1]   # y position on the real map
                 if view[y][x].upper() == FieldType.CASTLE.value and a != 0 and b != 0:
+                    # if the field type is 'G' and it is not on (0, 0) the bot recognises it as the enemies castle
                     self.f_Fcast = True
                     self.xy_Fcast = [a, b]
                 self.map[b][a] = view[y][x].upper()
@@ -177,7 +190,6 @@ class ClientController:
     def go(self):
         """
         Deferments what Algorithm to use and where to go to
-        :return:
         """
         if self.f_scroll and not self.g_scroll:
             self.goTo(self.xy_scroll)
@@ -190,7 +202,6 @@ class ClientController:
         """
         This is being called, if the next target is not discovered yet, not really random.
         Currently it just goes the direction with the least weight of the surrounding fields.
-        :return:
         """
         if self.turn < 3:
             # this part gets all neighbouring fields and puts them in a heapqueue in order to get the one
@@ -232,6 +243,7 @@ class ClientController:
     def goStep(self, step):
         """
         This takes the specified number, translates it to a direction and then sends the server the right command
+
         :param step:
         :return:
         """
@@ -248,6 +260,7 @@ class ClientController:
     def goTo(self, xy):
         """
         This was useful in the past :/
+
         :param xy: target
         :return:
         """
@@ -256,6 +269,7 @@ class ClientController:
     def getNeighbours(self, xy):
         """
         This method returns a list of all neighbouring fields of a specified source field
+
         :param xy: the source field
         :return: a list of al neighbouring fields
         """
@@ -278,6 +292,7 @@ class ClientController:
     def getNewFields(self, xy):
         """
         This Method returns how many fields are unknown in the area of the given field
+
         :param xy: the field to test
         :return: amount of unknown fields
         """
@@ -335,6 +350,7 @@ class ClientController:
     def moveX(self, i):
         """
         This updates the internal Position
+
         :param i: direction of movement
         """
         if i == '0':
@@ -350,16 +366,27 @@ class ClientController:
 
     def printMap(self):
         """
-        This prints the internal map
-        :return:
+        This prints the internal map with numbers representing line and row numbers
         """
-        for i in self.map:
-            print(i)
+        ustr = ''
+        while len(ustr) < len(str(len(self.map[1]))):
+            ustr += ' '
+        for i in range(0, len(self.map[1])):
+            tstr = "%i:" % i
+            ustr += '%5s' % tstr
+
+        print(ustr)     # top row
+        for i in range(0, len(self.map)):
+            fstr = str(i) + ':'
+            while len(fstr) < len(str(len(self.map[1])))+1:
+                fstr += ' '
+            print(fstr + str(self.map[i]))
 
     @staticmethod
     def reconstruct_path(came_from, start, goal):
         """
         This has also been taken from: http://www.redblobgames.com/pathfinding/a-star/implementation.html
+
         :param came_from: a list of tuples representing the chosen path
         :param start: xy pos
         :param goal: py pos of target
@@ -377,6 +404,7 @@ class ClientController:
     def translate(self, x, y, dist):
         """
         this translates coordinates from the server-input to the coordinates on the internal map
+
         :param x:
         :param y:
         :param dist:
@@ -401,6 +429,7 @@ class ClientController:
     def weight(self, xy, neighbours=0):
         """
         this calculates the weight of a field, don't ask what went through my mind
+
         :param xy: Field to check
         :param neighbours: determines how many levels of neighbouring fields should
         :return:
@@ -441,7 +470,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-s', '--size=', type=int, help='size of the map', default=10, dest='size')
     parser.add_argument(
-        '-v', '--verbose', help='if true it displays the steps in the comandline', action="store_true")
+        '-v', '--verbose', help='if true it displays the steps in the commandline', action="store_true")
     args = parser.parse_args()
     print(args)
     client = ClientController(args.server, args.port, args.size, args.verbose)
